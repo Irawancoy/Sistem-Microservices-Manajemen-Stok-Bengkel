@@ -40,7 +40,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(
                   (authz) -> authz
                         .requestMatchers(
-                              "/api/v1/auth/login"
+                              "/api/v1/auth/login",
+                              "/api/v1/users"
                         )
                         .permitAll() // Izinkan endpoint ini tanpa auth
                         .anyRequest()

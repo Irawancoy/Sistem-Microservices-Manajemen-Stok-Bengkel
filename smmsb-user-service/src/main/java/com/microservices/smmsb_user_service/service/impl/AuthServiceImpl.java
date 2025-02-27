@@ -17,8 +17,6 @@ import com.microservices.smmsb_user_service.service.AuthService;
 import com.microservices.smmsb_user_service.security.JwtUtil;
 import com.microservices.smmsb_user_service.utils.MessageUtils;
 
-import java.util.UUID;
-
 @Service
 public class AuthServiceImpl implements AuthService {
 
