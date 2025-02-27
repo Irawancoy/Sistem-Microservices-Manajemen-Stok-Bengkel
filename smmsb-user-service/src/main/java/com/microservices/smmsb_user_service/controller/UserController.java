@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.Link;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.microservices.smmsb_user_service.dto.UserDto;
 import com.microservices.smmsb_user_service.dto.request.CreateUserRequest;
 import com.microservices.smmsb_user_service.dto.request.UpdateUserRequest;
+import com.microservices.smmsb_user_service.dto.response.ApiDataResponseBuilder;
 import com.microservices.smmsb_user_service.dto.response.ListResponse;
 import com.microservices.smmsb_user_service.dto.response.MessageResponse;
 import com.microservices.smmsb_user_service.service.UserService;
@@ -29,10 +29,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-
-import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -88,33 +84,19 @@ public class UserController {
 
       // Get All Users
       @GetMapping("/get-all")
-      @Operation(summary = "Get all users", description = "Retrieves a paginated list of all users. Supports filtering.", tags = {
+      @Operation(summary = "Get all users", description = "Retrieves a list of all users with optional filters.", tags = {
                   "Users" })
       @ApiResponses(value = {
                   @ApiResponse(responseCode = "200", description = "Successfully retrieved users", content = @Content(schema = @Schema(implementation = ListResponse.class))),
-                  @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(implementation = MessageResponse.class)))
+                  @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content)
       })
       public ResponseEntity<ListResponse<EntityModel<UserDto>>> getAllUsers(
                   @PageableDefault(size = 10) Pageable pageable,
                   @RequestParam(required = false) String username,
                   @RequestParam(required = false) String email,
                   @RequestParam(required = false) String role) {
-            ListResponse<UserDto> usersResponse = userService.getAllUsers(pageable, username, email, role);
-            List<EntityModel<UserDto>> userResources = usersResponse.getData().stream().map(
-                        user -> {
-                              Link selfLink = linkTo(methodOn(UserController.class).getUserById(user.getId()))
-                                          .withSelfRel();
-                              Link updateLink = linkTo(methodOn(UserController.class).updateUser(user.getId(), null))
-                                          .withRel("update");
-                              Link deleteLink = linkTo(methodOn(UserController.class).deleteUser(user.getId()))
-                                          .withRel("delete");
-                              return EntityModel.of(user, selfLink, updateLink, deleteLink);
-                        }).toList();
 
-            ListResponse<EntityModel<UserDto>> listResponse = new ListResponse<>(
-                        userResources, usersResponse.getMessage(), usersResponse.getStatusCode(),
-                        usersResponse.getStatus());
-            return ResponseEntity.ok(listResponse);
+            return ResponseEntity.ok(userService.getAllUsers(pageable, username, email, role));
       }
 
       // Get User By Id
@@ -125,16 +107,8 @@ public class UserController {
                   @ApiResponse(responseCode = "404", description = "User not found", content = @Content),
                   @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(implementation = MessageResponse.class)))
       })
-      public ResponseEntity<EntityModel<UserDto>> getUserById(@PathVariable int id) {
-            UserDto user = userService.getUserById(id);
-            if (user == null) {
-                  return ResponseEntity.notFound().build();
-            }
-            Link selfLink = linkTo(methodOn(UserController.class).getUserById(id)).withSelfRel();
-            Link allUserLink = linkTo(methodOn(UserController.class).getAllUsers(null, null, null, null)).withRel("allUsers");
-            Link updateLink = linkTo(methodOn(UserController.class).updateUser(id, null)).withRel("update");
-            Link deleteLink = linkTo(methodOn(UserController.class).deleteUser(id)).withRel("delete");
-            EntityModel<UserDto> userResource = EntityModel.of(user,allUserLink, selfLink, updateLink, deleteLink);
-            return ResponseEntity.ok(userResource);
+      public ResponseEntity<ApiDataResponseBuilder> getUserById(@PathVariable int id) {
+            return ResponseEntity.ok(userService.getUserById(id));
       }
+
 }
