@@ -41,8 +41,9 @@ public class SecurityConfig {
                   (authz) -> authz
                         .requestMatchers(
                               "/api/v1/auth/login",
-                              "/api/v1/users"
-                        )
+                              "/api/v1/users",
+                              "/swagger-ui/**",
+                              "/v3/api-docs/**")
                         .permitAll() // Izinkan endpoint ini tanpa auth
                         .anyRequest()
                         .authenticated())

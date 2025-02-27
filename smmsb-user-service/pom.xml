@@ -31,6 +31,7 @@
 		<jjwt.version>0.11.2</jjwt.version>
 		<modelmapper.version>3.1.1</modelmapper.version>
 		<jakarta.validation.version>3.0.0</jakarta.validation.version>
+		<openapi.version>2.7.0</openapi.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -73,6 +74,11 @@
         <version>${jakarta.validation.version}</version>
    	</dependency>
 		<dependency>
+		<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${openapi.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-redis</artifactId>
 		</dependency>
@@ -99,6 +105,11 @@
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId >org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<optional>true</optional>
 		</dependency>
 	</dependencies>
 
