@@ -6,6 +6,9 @@ import com.microservices.smmsb_transaction_service.dto.response.ApiDataResponseB
 import com.microservices.smmsb_transaction_service.dto.response.ListResponse;
 import com.microservices.smmsb_transaction_service.dto.response.MessageResponse;
 import com.microservices.smmsb_transaction_service.service.TransactionService;
+
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -24,8 +27,8 @@ public class TransactionController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<MessageResponse> createTransaction(@RequestBody CreateTransactionRequest request) {
-        MessageResponse response = transactionService.createTransaction(request);
+    public ResponseEntity<MessageResponse> createTransaction(@RequestBody CreateTransactionRequest request,HttpServletRequest httpServletRequest) {
+        MessageResponse response = transactionService.createTransaction(request, httpServletRequest);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

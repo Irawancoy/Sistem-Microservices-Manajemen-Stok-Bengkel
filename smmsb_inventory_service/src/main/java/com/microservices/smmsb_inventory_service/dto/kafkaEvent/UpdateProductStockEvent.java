@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class UpdateProductStockEvent {
+    private Long userId;
     private Long productId;
     private int quantity;
 }

@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class UpdateProductStockRequest {
+
    private String productName;
 
    private String description;

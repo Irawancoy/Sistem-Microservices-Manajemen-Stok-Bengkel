@@ -3,9 +3,11 @@ package com.microservices.smmsb_user_service.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -36,21 +38,34 @@ public class SecurityConfig {
 
    @Bean
    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-      return http.csrf(AbstractHttpConfigurer::disable)
-            .authorizeHttpRequests(
-                  (authz) -> authz
-                        .requestMatchers(
-                              "/api/v1/auth/login",
-                              "/api/v1/users",
-                              "/swagger-ui/**",
-                              "/v3/api-docs/**")
-                        .permitAll() // Izinkan endpoint ini tanpa auth
-                        .anyRequest()
-                        .authenticated())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            .sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .build();
+       return http
+           .cors(Customizer.withDefaults()) // Aktifkan CORS
+           .csrf(AbstractHttpConfigurer::disable)
+           .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+           .authorizeHttpRequests(auth -> auth
+               // ✅ Endpoints Public (tanpa autentikasi)
+               .requestMatchers(
+                   "/api/v1/auth/login",
+                   "/api/v1/users/exist",
+                   "/swagger-ui/**",
+                   "/v3/api-docs/**"
+               ).permitAll()
+
+               // ✅ ROLE_SUPERADMIN Bisa CRUD user
+               .requestMatchers(HttpMethod.POST, "/api/v1/users/**").hasRole("SUPERADMIN")
+               .requestMatchers(HttpMethod.PUT, "/api/v1/users/**").hasRole("SUPERADMIN")
+               .requestMatchers(HttpMethod.DELETE, "/api/v1/users/**").hasRole("SUPERADMIN")
+
+               // ✅ ROLE_ADMIN hanya bisa membaca data user
+               .requestMatchers(HttpMethod.GET, "/api/v1/users/**").hasAnyRole("ADMIN", "SUPERADMIN")
+
+               // ✅ Semua request lain harus autentikasi
+               .anyRequest().authenticated()
+           )
+           .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+           .build();
    }
+
 
    @Bean
    public PasswordEncoder passwordEncoder() {

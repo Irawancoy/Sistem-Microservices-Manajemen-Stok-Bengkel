@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 
 @Data
 public class CreateProductStockRequest {
+
    @NotBlank(message = "Product Name is required")
    private String productName;
 

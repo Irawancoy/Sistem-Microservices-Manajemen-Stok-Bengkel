@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.security.core.GrantedAuthority;
-
+import org.springframework.security.core.Authentication;
 
 import java.security.Key;
 import java.util.Date;
@@ -31,6 +31,10 @@ public class JwtUtil {
         return extractClaim(token, Claims::getSubject);
     }
 
+    public Long extractUserId(String token) {
+        return extractClaim(token, claims -> claims.get("userId", Long.class));
+    }
+
     public Date extractExpiration(String token) {
         return extractClaim(token, Claims::getExpiration);
     }
@@ -41,8 +45,7 @@ public class JwtUtil {
     }
 
     private Claims extractAllClaims(String token) {
-        return Jwts
-                .parserBuilder()
+        return Jwts.parserBuilder()
                 .setSigningKey(getSignKey())
                 .build()
                 .parseClaimsJws(token)
@@ -52,13 +55,19 @@ public class JwtUtil {
     private Boolean isTokenExpired(String token) {
         return extractExpiration(token).before(new Date());
     }
-     public String generateToken(org.springframework.security.core.Authentication authentication){
-        Map<String,Object> claims=new HashMap<>();
-        //masukan claims authorities untuk mendapatkan role
-         claims.put("authorities", authentication.getAuthorities().stream()
+
+    public String generateToken(Authentication authentication, Long userId) {
+        Map<String, Object> claims = new HashMap<>();
+        
+        // Masukkan authorities ke dalam claims
+        claims.put("authorities", authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList()));
-        return createToken(claims,authentication.getName());
+        
+        // Masukkan userId ke dalam claims
+        claims.put("userId", userId);
+
+        return createToken(claims, authentication.getName());
     }
 
     private String createToken(Map<String, Object> claims, String userName) {
@@ -67,9 +76,9 @@ public class JwtUtil {
                 .setSubject(userName)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(getSignKey(), SignatureAlgorithm.HS256).compact();
+                .signWith(getSignKey(), SignatureAlgorithm.HS256)
+                .compact();
     }
-
 
     public Boolean validateToken(String token, UserDetails userDetails) {
         final String username = extractUsername(token);

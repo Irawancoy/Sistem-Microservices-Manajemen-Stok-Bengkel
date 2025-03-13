@@ -20,4 +20,5 @@ public interface UserService {
    ListResponse<EntityModel<UserDto>> getAllUsers(Pageable pageable, String username, String email, String role);
 
    ApiDataResponseBuilder getUserById(int id);
+   
 }

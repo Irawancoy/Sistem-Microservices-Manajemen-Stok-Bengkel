@@ -1,6 +1,5 @@
 package com.microservices.smmsb_inventory_service.controller;
 
-
 import com.microservices.smmsb_inventory_service.dto.ProductStockDto;
 import com.microservices.smmsb_inventory_service.dto.request.CreateProductStockRequest;
 import com.microservices.smmsb_inventory_service.dto.request.UpdateProductStockRequest;
@@ -9,10 +8,11 @@ import com.microservices.smmsb_inventory_service.dto.response.ListResponse;
 import com.microservices.smmsb_inventory_service.dto.response.MessageResponse;
 import com.microservices.smmsb_inventory_service.service.ProductStockService;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.hateoas.EntityModel;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,26 +34,27 @@ public class ProductStockController {
 
     // Create product stock
     @PostMapping("/create")
-    public MessageResponse createProductStock(@RequestBody CreateProductStockRequest createProductStockRequest) {
-        return productStockService.createProductStock(createProductStockRequest);
+    public MessageResponse createProductStock(@RequestBody CreateProductStockRequest createProductStockRequest,
+            HttpServletRequest request) {
+        return productStockService.createProductStock(createProductStockRequest, request);
     }
 
     // Update product stock
     @PutMapping("/update/{id}")
     public MessageResponse updateProductStock(@PathVariable Long id,
-            @RequestBody UpdateProductStockRequest updateProductStockRequest) {
-        return productStockService.updateProductStock(id, updateProductStockRequest);
+            @RequestBody UpdateProductStockRequest updateProductStockRequest, HttpServletRequest request) {
+        return productStockService.updateProductStock(id, updateProductStockRequest, request);
     }
 
     // delete product stock
     @DeleteMapping("/delete/{id}")
-    public MessageResponse deleteProductStock(@PathVariable Long id) {
-        return productStockService.deleteProductStock(id);
+    public MessageResponse deleteProductStock(@PathVariable Long id, HttpServletRequest request) {
+        return productStockService.deleteProductStock(id, request);
     }
 
     // get all product stock
     @GetMapping("/get-all")
-    public ResponseEntity<ListResponse<EntityModel<ProductStockDto>>> getAllProductStock(
+    public ResponseEntity<ListResponse<ProductStockDto>> getAllProductStock(
             @PageableDefault(size = 10) Pageable pageable,
             @RequestParam(required = false) String productName,
             @RequestParam(required = false) String changeType,
@@ -68,14 +69,13 @@ public class ProductStockController {
     }
 
     // upload photo
-    @PostMapping(value="/upload-photo/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-        public ResponseEntity<ListResponse<Map<String, String>>> uploadUserPhoto(
-                @PathVariable Long id,
-                @RequestParam("file") MultipartFile file){
-            ListResponse<Map<String, String>> response = productStockService.uploadImage(file, id);
-                    
-            return ResponseEntity.ok(response);
-                }
-        
+    @PostMapping(value = "/upload-photo/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<ListResponse<Map<String, String>>> uploadUserPhoto(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file) {
+        ListResponse<Map<String, String>> response = productStockService.uploadImage(file, id);
+
+        return ResponseEntity.ok(response);
+    }
 
 }

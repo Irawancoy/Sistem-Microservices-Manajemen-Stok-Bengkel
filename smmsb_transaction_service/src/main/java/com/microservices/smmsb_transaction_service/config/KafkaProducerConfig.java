@@ -20,7 +20,8 @@ import org.springframework.kafka.core.KafkaAdmin;
 public class KafkaProducerConfig {
 
     private static final String KAFKA_BROKER = "localhost:9082";
-    private static final String TOPIC_NAME = "update-product-stock";
+    private static final String UPDATE_PRODUCT_STOCK = "update-product-stock";
+    private static final String NOTIFICATION_EVENT = "notificationTopic";
 
     // Konfigurasi Producer
     @Bean
@@ -53,6 +54,11 @@ public class KafkaProducerConfig {
 
     @Bean
     public NewTopic createTopic() {
-        return new NewTopic(TOPIC_NAME, 1, (short) 1); // 1 partition, 1 replication factor
+       return new NewTopic(UPDATE_PRODUCT_STOCK, 1, (short) 1); // 1 partition, 1 replication factor
+    }
+    
+    @Bean
+    public NewTopic createNotificationTopic() {
+       return new NewTopic(NOTIFICATION_EVENT, 1, (short) 1); // 1 partition, 1 replication factor
     }
 }

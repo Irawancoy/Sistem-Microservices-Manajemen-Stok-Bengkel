@@ -14,7 +14,7 @@ public class CustomUserDetails implements UserDetails {
      private String userName;
     private String password;
     private List<GrantedAuthority> authorities;
-    private int id;
+    private Long id;
 
     public CustomUserDetails(User user) {
         this.userName = user.getUsername();
@@ -38,7 +38,7 @@ public class CustomUserDetails implements UserDetails {
     public String getUsername() {
         return userName;
     }
-    public int getId() {
+    public Long getId() {
         return id;
     }
 

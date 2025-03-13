@@ -40,8 +40,12 @@ public class OpenApiConfig {
 
     @Bean
     public OpenAPI openAPI() {
-        return new OpenAPI().addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
-            .components(new Components().addSecuritySchemes("Bearer Authentication", createAPIKeyScheme()))
+        return new OpenAPI()
+            .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
+            .addSecurityItem(new SecurityRequirement().addList("X-Session-Id"))
+            .components(new Components()
+                .addSecuritySchemes("Bearer Authentication", createAPIKeyScheme())
+                .addSecuritySchemes("X-Session-Id", createSessionIdScheme()))
             .info(new Info().title(title)
                 .description(description)
                 .version(version)
@@ -50,8 +54,16 @@ public class OpenApiConfig {
     }
 
     private SecurityScheme createAPIKeyScheme() {
-        return new SecurityScheme().type(SecurityScheme.Type.HTTP)
+        return new SecurityScheme()
+            .type(SecurityScheme.Type.HTTP)
             .bearerFormat("JWT")
             .scheme("bearer");
+    }
+
+    private SecurityScheme createSessionIdScheme() {
+        return new SecurityScheme()
+            .type(SecurityScheme.Type.APIKEY)
+            .in(SecurityScheme.In.HEADER)
+            .name("X-Session-Id");
     }
 }

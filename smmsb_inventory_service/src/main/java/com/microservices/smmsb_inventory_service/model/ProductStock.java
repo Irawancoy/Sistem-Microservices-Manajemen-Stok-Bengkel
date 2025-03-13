@@ -47,7 +47,7 @@ public class ProductStock {
     private LocalDateTime timestamp;
 
     @Column(nullable = false)
-    private String createdBy;
+    private Long createdBy;
 
     @Column(nullable = false)
     @CreationTimestamp
