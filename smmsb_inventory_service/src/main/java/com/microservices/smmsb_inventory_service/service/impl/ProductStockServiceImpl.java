@@ -230,13 +230,10 @@ public class ProductStockServiceImpl implements ProductStockService {
 
         @Override
         public ListResponse<ProductStockDto> getAllProductStocks(Pageable pageable, String productName,
-                        String changeType, BigDecimal price) {
+                        BigDecimal price) {
                 Specification<ProductStock> spec = Specification.where(null);
                 if (productName != null) {
                         spec = spec.and(ProductStockSpesification.hasProductName(productName));
-                }
-                if (changeType != null) {
-                        spec = spec.and(ProductStockSpesification.hasChangeType(changeType));
                 }
                 if (price != null) {
                         spec = spec.and(ProductStockSpesification.hasPrice(price));

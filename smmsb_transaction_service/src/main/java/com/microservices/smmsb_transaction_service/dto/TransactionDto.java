@@ -11,6 +11,7 @@ public class TransactionDto {
     private Long userId;
     private Long productId;
     private String productName;
+    private BigDecimal price;
     private Integer quantity;
     private BigDecimal totalAmount;
     private LocalDateTime createdAt;

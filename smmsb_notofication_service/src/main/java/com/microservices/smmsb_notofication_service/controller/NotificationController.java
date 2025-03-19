@@ -56,7 +56,7 @@ public class NotificationController {
     })
     public ResponseEntity<ListResponse<NotificationDto>> getAllNotifications(
             @PageableDefault(size = 10) Pageable pageable,
-            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) Long userId,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String message) {
         ListResponse<NotificationDto> response = notificationService.getAllNotifications(pageable, userId, type, message);

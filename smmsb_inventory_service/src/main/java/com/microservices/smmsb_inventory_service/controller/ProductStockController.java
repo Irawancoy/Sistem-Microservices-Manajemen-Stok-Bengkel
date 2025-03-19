@@ -90,9 +90,8 @@ public class ProductStockController {
     public ResponseEntity<ListResponse<ProductStockDto>> getAllProductStock(
             @PageableDefault(size = 10) Pageable pageable,
             @RequestParam(required = false) String productName,
-            @RequestParam(required = false) String changeType,
             @RequestParam(required = false) BigDecimal price) {
-        return ResponseEntity.ok(productStockService.getAllProductStocks(pageable, productName, changeType, price));
+        return ResponseEntity.ok(productStockService.getAllProductStocks(pageable, productName, price));
     }
 
     // get product stock by id

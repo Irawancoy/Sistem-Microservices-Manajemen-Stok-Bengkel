@@ -11,5 +11,5 @@ public interface NotificationService {
 
    ApiDataResponseBuilder getNotificationById(Long id);
 
-   ListResponse<NotificationDto> getAllNotifications(Pageable pageable,String userId,String type,String message);
+   ListResponse<NotificationDto> getAllNotifications(Pageable pageable,Long userId,String type,String message);
 }

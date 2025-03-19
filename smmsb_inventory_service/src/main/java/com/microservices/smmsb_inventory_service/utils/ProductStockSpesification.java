@@ -1,5 +1,6 @@
 package com.microservices.smmsb_inventory_service.utils;
 
+
 import java.math.BigDecimal;
 
 import org.springframework.data.jpa.domain.Specification;

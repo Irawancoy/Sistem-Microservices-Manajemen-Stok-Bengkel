@@ -3,7 +3,6 @@ package com.microservices.smmsb_user_service.controller;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -66,7 +65,7 @@ public class UserController {
                   @ApiResponse(responseCode = "409", description = "Email already exists", content = @Content(schema = @Schema(implementation = MessageResponse.class))),
                   @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(implementation = MessageResponse.class)))
       })
-      public MessageResponse updateUser(@PathVariable int id, UpdateUserRequest updateUserRequest) {
+      public MessageResponse updateUser(@PathVariable Long id, UpdateUserRequest updateUserRequest) {
             return userService.updateUser(id, updateUserRequest);
       }
 
@@ -77,7 +76,7 @@ public class UserController {
                   @ApiResponse(responseCode = "200", description = "User deleted successfully", content = @Content(schema = @Schema(implementation = MessageResponse.class))),
                   @ApiResponse(responseCode = "404", description = "User not found", content = @Content),
                   @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(implementation = MessageResponse.class))) })
-      public MessageResponse deleteUser(@PathVariable int id) {
+      public MessageResponse deleteUser(@PathVariable Long id) {
             return userService.deleteUser(id);
       }
 
@@ -89,7 +88,7 @@ public class UserController {
                   @ApiResponse(responseCode = "200", description = "Successfully retrieved users", content = @Content(schema = @Schema(implementation = ListResponse.class))),
                   @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content)
       })
-      public ResponseEntity<ListResponse<EntityModel<UserDto>>> getAllUsers(
+      public ResponseEntity<ListResponse<UserDto>> getAllUsers(
                   @PageableDefault(size = 10) Pageable pageable,
                   @RequestParam(required = false) String username,
                   @RequestParam(required = false) String email,
@@ -106,7 +105,7 @@ public class UserController {
                   @ApiResponse(responseCode = "404", description = "User not found", content = @Content),
                   @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(implementation = MessageResponse.class)))
       })
-      public ResponseEntity<ApiDataResponseBuilder> getUserById(@PathVariable int id) {
+      public ResponseEntity<ApiDataResponseBuilder> getUserById(@PathVariable Long id) {
             return ResponseEntity.ok(userService.getUserById(id));
       }
 }

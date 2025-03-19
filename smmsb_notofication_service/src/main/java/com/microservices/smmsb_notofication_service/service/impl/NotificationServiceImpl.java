@@ -49,12 +49,12 @@ public class NotificationServiceImpl implements NotificationService {
    }
 
    @Override
-   public ListResponse<NotificationDto> getAllNotifications(Pageable pageable, String userId, String type,
+   public ListResponse<NotificationDto> getAllNotifications(Pageable pageable, Long userId, String type,
          String message) {
 
       Specification<Notification> spec = Specification.where(null);
       if (userId != null) {
-         spec = spec.and(NotificationSpecification.hasUserId(Long.parseLong(userId)));
+         spec = spec.and(NotificationSpecification.hasUserId(userId));
       }
       if (type != null) {
          spec = spec.and(NotificationSpecification.hasType(type));

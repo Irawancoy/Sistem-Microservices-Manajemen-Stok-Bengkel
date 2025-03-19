@@ -7,15 +7,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.Link;
-import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.microservices.smmsb_user_service.controller.UserController;
 import com.microservices.smmsb_user_service.dto.UserDto;
 import com.microservices.smmsb_user_service.dto.request.CreateUserRequest;
 import com.microservices.smmsb_user_service.dto.request.UpdateUserRequest;
@@ -82,7 +77,7 @@ public class UserServiceImpl implements UserService {
       // Update User
       @Override
       @Transactional
-      public MessageResponse updateUser(int Id, UpdateUserRequest updateUserRequest) {
+      public MessageResponse updateUser(Long Id, UpdateUserRequest updateUserRequest) {
             // Check if user exists
             User user = userRepository.findById(Id)
                         .orElseThrow(() -> new RuntimeException(
@@ -128,7 +123,7 @@ public class UserServiceImpl implements UserService {
       // Delete User
       @Override
       @Transactional
-      public MessageResponse deleteUser(int Id) {
+      public MessageResponse deleteUser(Long Id) {
             // Check if user exists
             if (!userRepository.existsById(Id)) {
                   return new MessageResponse(
@@ -146,74 +141,48 @@ public class UserServiceImpl implements UserService {
 
       // Get All Users
       @Override
-      public ListResponse<EntityModel<UserDto>> getAllUsers(Pageable pageable, String username, String email,
-                  String role) {
-            Specification<User> spec = Specification.where(null);
-
-            if (username != null) {
-                  spec = spec.and(UserSpecifications.hasUsername(username));
-            }
-            if (email != null) {
-                  spec = spec.and(UserSpecifications.hasEmail(email));
-            }
-            if (role != null) {
-                  spec = spec.and(UserSpecifications.hasRole(role));
-            }
-
-            Page<User> users = userRepository.findAll(spec, pageable);
-            List<EntityModel<UserDto>> userResources = users.stream().map(user -> {
-                  UserDto userDto = modelMapper.map(user, UserDto.class);
-
-                  // Tambahkan HATEOAS links
-                  Link selfLink = WebMvcLinkBuilder
-                              .linkTo(WebMvcLinkBuilder.methodOn(UserController.class).getUserById(userDto.getId()))
-                              .withSelfRel();
-                  Link updateLink = WebMvcLinkBuilder
-                              .linkTo(WebMvcLinkBuilder.methodOn(UserController.class).updateUser(userDto.getId(),
-                                          null))
-                              .withRel("update");
-                  Link deleteLink = WebMvcLinkBuilder
-                              .linkTo(WebMvcLinkBuilder.methodOn(UserController.class).deleteUser(userDto.getId()))
-                              .withRel("delete");
-
-                  return EntityModel.of(userDto, selfLink, updateLink, deleteLink);
-            }).toList();
-
-            return new ListResponse<>(
-                        userResources,
-                        messageUtils.getMessage("success.user.retrieved"),
-                        HttpStatus.OK.value(),
-                        HttpStatus.OK.name());
+      public ListResponse<UserDto> getAllUsers(Pageable pageable, String username, String email, String role) {
+          Specification<User> spec = Specification.where(null);
+      
+          if (username != null) {
+              spec = spec.and(UserSpecifications.hasUsername(username));
+          }
+          if (email != null) {
+              spec = spec.and(UserSpecifications.hasEmail(email));
+          }
+          if (role != null) {
+              spec = spec.and(UserSpecifications.hasRole(role));
+          }
+      
+          Page<User> users = userRepository.findAll(spec, pageable);
+          List<UserDto> userDtos = users.stream()
+                  .map(user -> modelMapper.map(user, UserDto.class))
+                  .toList();
+      
+          return new ListResponse<>(
+                  userDtos,
+                  messageUtils.getMessage("success.user.retrieved"),
+                  HttpStatus.OK.value(),
+                  HttpStatus.OK.name()
+          );
       }
+      
 
       // Get User By Id
       @Override
-      public ApiDataResponseBuilder getUserById(int id) {
-            User user = userRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException(
-                                    messageUtils.getMessage("error.user.not.found", id)));
-
-            UserDto userDto = modelMapper.map(user, UserDto.class);
-
-            // Tambahkan HATEOAS links
-            Link selfLink = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class).getUserById(id))
-                        .withSelfRel();
-            Link allUsersLink = WebMvcLinkBuilder
-                        .linkTo(WebMvcLinkBuilder.methodOn(UserController.class).getAllUsers(null, null, null, null))
-                        .withRel("allUsers");
-            Link updateLink = WebMvcLinkBuilder
-                        .linkTo(WebMvcLinkBuilder.methodOn(UserController.class).updateUser(id, null))
-                        .withRel("update");
-            Link deleteLink = WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(UserController.class).deleteUser(id))
-                        .withRel("delete");
-
-            EntityModel<UserDto> userResource = EntityModel.of(userDto, selfLink, allUsersLink, updateLink, deleteLink);
-
-            return ApiDataResponseBuilder.builder()
-                        .data(userResource)
-                        .message(messageUtils.getMessage("success.user.retrieved"))
-                        .status(HttpStatus.OK)
-                        .statusCode(HttpStatus.OK.value())
-                        .build();
+      public ApiDataResponseBuilder getUserById(Long id) {
+          User user = userRepository.findById(id)
+                  .orElseThrow(() -> new RuntimeException(
+                          messageUtils.getMessage("error.user.not.found", id)));
+      
+          UserDto userDto = modelMapper.map(user, UserDto.class);
+      
+          return ApiDataResponseBuilder.builder()
+                  .data(userDto)
+                  .message(messageUtils.getMessage("success.user.retrieved"))
+                  .status(HttpStatus.OK)
+                  .statusCode(HttpStatus.OK.value())
+                  .build();
       }
+      
 }

@@ -28,7 +28,7 @@ public interface ProductStockService {
       MessageResponse deleteProductStock(Long id,HttpServletRequest request);
 
       ListResponse<ProductStockDto> getAllProductStocks(Pageable pageable, String productName,
-                  String changeType, BigDecimal price);
+                   BigDecimal price);
 
       ListResponse<Map<String, String>> uploadImage(MultipartFile file, Long id);
 

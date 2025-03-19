@@ -20,12 +20,24 @@ public class Transaction {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long userId;
+
+    @Column(nullable = false)
     private Long productId; // ID produk dari Product Service
+
+    @Column(nullable = false)
     private String productName; // Nama produk dari Product Service
+
+    @Column(nullable = false)
     private BigDecimal price; // Harga produk saat transaksi
+
+    @Column(nullable = false)
     private Integer quantity;
+
+    @Column(nullable = false)
     private BigDecimal totalAmount;
+    
     @CreationTimestamp
     private LocalDateTime createdAt;
 }

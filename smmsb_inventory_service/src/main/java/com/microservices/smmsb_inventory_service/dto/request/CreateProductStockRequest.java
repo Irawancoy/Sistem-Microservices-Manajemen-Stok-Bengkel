@@ -1,6 +1,9 @@
 package com.microservices.smmsb_inventory_service.dto.request;
 
 import lombok.Data;
+
+import java.math.BigDecimal;
+
 import jakarta.validation.constraints.NotBlank;
 
 @Data
@@ -15,7 +18,6 @@ public class CreateProductStockRequest {
    private int quantity;
    
    @NotBlank(message = "Price is required")
-   private double price;
-
+   private BigDecimal price;
 
 }
