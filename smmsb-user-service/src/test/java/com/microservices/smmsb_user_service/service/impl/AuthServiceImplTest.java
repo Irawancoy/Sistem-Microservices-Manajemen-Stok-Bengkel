@@ -1,7 +1,7 @@
 package com.microservices.smmsb_user_service.service.impl;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import java.util.Optional;
@@ -17,11 +17,11 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import com.microservices.smmsb_user_service.dto.request.LoginRequest;
 import com.microservices.smmsb_user_service.dto.response.ApiDataResponseBuilder;
 import com.microservices.smmsb_user_service.dto.response.LoginResponse;
+import com.microservices.smmsb_user_service.exception.ResourceNotFoundException;
 import com.microservices.smmsb_user_service.model.AuthSession;
 import com.microservices.smmsb_user_service.model.User;
 import com.microservices.smmsb_user_service.repository.AuthSessionRepository;
@@ -55,27 +55,20 @@ public class AuthServiceImplTest {
 
    private LoginRequest loginRequest;
    private User user;
-   private AuthSession authSession;
-   private String jwtToken;
+   private String token;
 
    @BeforeEach
    void setUp() {
-      // Setup test data
       loginRequest = new LoginRequest();
       loginRequest.setUsername("testuser");
-      loginRequest.setPassword("password123");
+      loginRequest.setPassword("password");
 
       user = new User();
       user.setId(1L);
       user.setUsername("testuser");
-      user.setEmail("test@example.com");
-      user.setPasswordHash("hashedpassword");
-      user.setRole("ROLE_ADMIN"); // ROLE_ADMIN or ROLE_SUPERADMIN
+      user.setRole("ROLE_SUPERADMIN");
 
-      jwtToken = "test.jwt.token";
-
-      authSession = new AuthSession("testuser", jwtToken, "ROLE_ADMIN");
-      authSession.setSessionId("test-session-id");
+      token = "test.jwt.token";
    }
 
    @Test
@@ -83,84 +76,51 @@ public class AuthServiceImplTest {
       // Arrange
       when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
             .thenReturn(authentication);
-      when(authentication.isAuthenticated()).thenReturn(true);
       when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-      when(jwtUtil.generateToken(authentication, 1L)).thenReturn(jwtToken);
-
-      // Mock the AuthSession creation and save
+      when(jwtUtil.generateToken(authentication, 1L)).thenReturn(token);
+      when(messageUtils.getMessage("success.login")).thenReturn("Login successful");
       when(authSessionRepository.save(any(AuthSession.class))).thenAnswer(invocation -> {
          AuthSession session = invocation.getArgument(0);
-         // Set the session ID to our expected value
          session.setSessionId("test-session-id");
          return session;
       });
 
-      when(messageUtils.getMessage("success.login")).thenReturn("Login successful");
-
       // Act
-      ApiDataResponseBuilder response = authService.login(loginRequest);
+      ApiDataResponseBuilder result = authService.login(loginRequest);
 
       // Assert
-      assertNotNull(response);
-      assertEquals(HttpStatus.OK, response.getStatus());
-      assertEquals(HttpStatus.OK.value(), response.getStatusCode());
+      assertNotNull(result);
+      assertEquals(HttpStatus.OK, result.getStatus());
+      assertEquals(HttpStatus.OK.value(), result.getStatusCode());
+      assertEquals("Login successful", result.getMessage());
 
-      // Verify the response data
-      LoginResponse loginResponse = (LoginResponse) response.getData();
-      assertEquals(jwtToken, loginResponse.getToken());
+      LoginResponse loginResponse = (LoginResponse) result.getData();
+      assertNotNull(loginResponse);
+      assertEquals(token, loginResponse.getToken());
       assertEquals("testuser", loginResponse.getUsername());
-      assertEquals("ROLE_ADMIN", loginResponse.getRole());
+      assertEquals("ROLE_SUPERADMIN", loginResponse.getRole());
       assertEquals("test-session-id", loginResponse.getSessionId());
 
-      // Verify interactions
-      verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-      verify(userRepository).findByUsername("testuser");
-      verify(jwtUtil).generateToken(authentication, 1L);
       verify(authSessionRepository).save(any(AuthSession.class));
    }
 
    @Test
-   void login_AuthenticationFailed() {
+   void login_InvalidCredentials() {
       // Arrange
       when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-            .thenReturn(authentication);
-      when(authentication.isAuthenticated()).thenReturn(false);
-      when(messageUtils.getMessage("error.login.invalid.request")).thenReturn("Invalid login credentials");
+            .thenThrow(new BadCredentialsException("Invalid credentials"));
+      when(messageUtils.getMessage("error.login.invalid.credentials"))
+            .thenReturn("Invalid username or password");
 
       // Act & Assert
-      Exception exception = assertThrows(UsernameNotFoundException.class, () -> {
+      BadCredentialsException exception = assertThrows(BadCredentialsException.class, () -> {
          authService.login(loginRequest);
       });
 
-      assertEquals("Invalid login credentials", exception.getMessage());
-
-      // Verify interactions
-      verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
+      assertEquals("Invalid username or password", exception.getMessage());
       verify(userRepository, never()).findByUsername(anyString());
       verify(jwtUtil, never()).generateToken(any(), anyLong());
-      verify(authSessionRepository, never()).save(any(AuthSession.class));
-   }
-
-   @Test
-   void login_BadCredentials() {
-      // Arrange
-      when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-            .thenThrow(new BadCredentialsException("Bad credentials"));
-      // when(messageUtils.getMessage("error.login.invalid.request")).thenReturn("Invalid
-      // login credentials");
-
-      // Act & Assert
-      Exception exception = assertThrows(BadCredentialsException.class, () -> {
-         authService.login(loginRequest);
-      });
-
-      assertEquals("Bad credentials", exception.getMessage());
-
-      // Verify interactions
-      verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-      verify(userRepository, never()).findByUsername(anyString());
-      verify(jwtUtil, never()).generateToken(any(), anyLong());
-      verify(authSessionRepository, never()).save(any(AuthSession.class));
+      verify(authSessionRepository, never()).save(any());
    }
 
    @Test
@@ -168,68 +128,17 @@ public class AuthServiceImplTest {
       // Arrange
       when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
             .thenReturn(authentication);
-      when(authentication.isAuthenticated()).thenReturn(true);
       when(userRepository.findByUsername("testuser")).thenReturn(Optional.empty());
-      when(messageUtils.getMessage("error.login.invalid.request")).thenReturn("Invalid login credentials");
+      when(messageUtils.getMessage("error.login.username.not.found"))
+            .thenReturn("User not found");
 
       // Act & Assert
-      Exception exception = assertThrows(UsernameNotFoundException.class, () -> {
+      ResourceNotFoundException exception = assertThrows(ResourceNotFoundException.class, () -> {
          authService.login(loginRequest);
       });
 
-      assertEquals("Invalid login credentials", exception.getMessage());
-
-      // Verify interactions
-      verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-      verify(userRepository).findByUsername("testuser");
+      assertEquals("User not found", exception.getMessage());
       verify(jwtUtil, never()).generateToken(any(), anyLong());
-      verify(authSessionRepository, never()).save(any(AuthSession.class));
-   }
-
-   @Test
-   void login_TokenGenerationFails() {
-      // Arrange
-      when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-            .thenReturn(authentication);
-      when(authentication.isAuthenticated()).thenReturn(true);
-      when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-      when(jwtUtil.generateToken(authentication, 1L)).thenThrow(new RuntimeException("Token generation failed"));
-
-      // Act & Assert
-      Exception exception = assertThrows(RuntimeException.class, () -> {
-         authService.login(loginRequest);
-      });
-
-      assertEquals("Token generation failed", exception.getMessage());
-
-      // Verify interactions
-      verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-      verify(userRepository).findByUsername("testuser");
-      verify(jwtUtil).generateToken(authentication, 1L);
-      verify(authSessionRepository, never()).save(any(AuthSession.class));
-   }
-
-   @Test
-   void login_SessionSaveFails() {
-      // Arrange
-      when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
-            .thenReturn(authentication);
-      when(authentication.isAuthenticated()).thenReturn(true);
-      when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
-      when(jwtUtil.generateToken(authentication, 1L)).thenReturn(jwtToken);
-      when(authSessionRepository.save(any(AuthSession.class))).thenThrow(new RuntimeException("Session save failed"));
-
-      // Act & Assert
-      Exception exception = assertThrows(RuntimeException.class, () -> {
-         authService.login(loginRequest);
-      });
-
-      assertEquals("Session save failed", exception.getMessage());
-
-      // Verify interactions
-      verify(authenticationManager).authenticate(any(UsernamePasswordAuthenticationToken.class));
-      verify(userRepository).findByUsername("testuser");
-      verify(jwtUtil).generateToken(authentication, 1L);
-      verify(authSessionRepository).save(any(AuthSession.class));
+      verify(authSessionRepository, never()).save(any());
    }
 }

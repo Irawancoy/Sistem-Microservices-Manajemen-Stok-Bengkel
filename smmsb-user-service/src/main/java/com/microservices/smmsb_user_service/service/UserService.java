@@ -9,10 +9,9 @@ import com.microservices.smmsb_user_service.dto.response.ApiDataResponseBuilder;
 import com.microservices.smmsb_user_service.dto.response.ListResponse;
 import com.microservices.smmsb_user_service.dto.response.MessageResponse;
 
-import jakarta.servlet.http.HttpServletRequest;
 
 public interface UserService {
-   MessageResponse createUser(CreateUserRequest createUserRequest,HttpServletRequest request);
+   MessageResponse createUser(CreateUserRequest createUserRequest);
 
    MessageResponse updateUser(Long id, UpdateUserRequest updateUserRequest);
 

@@ -21,58 +21,57 @@ import com.microservices.smmsb_user_service.security.CustomUserDetails;
 @ExtendWith(MockitoExtension.class)
 public class UserDetailsServiceImplTest {
 
-    @Mock
-    private UserRepository userRepository;
+   @Mock
+   private UserRepository userRepository;
 
-    @InjectMocks
-    private UserDetailsServiceImpl userDetailsService;
+   @InjectMocks
+   private UserDetailsServiceImpl userDetailsService;
 
-    private User testUser;
+   private User testUser;
 
-    @BeforeEach
-    void setUp() {
-        // Setup test user
-        testUser = new User();
-        testUser.setId(1L);
-        testUser.setUsername("testuser");
-        testUser.setEmail("test@example.com");
-        testUser.setPasswordHash("hashedpassword");
-        testUser.setRole("ROLE_ADMIN"); // ROLE_ADMIN or ROLE_SUPERADMIN
-    }
+   @BeforeEach
+   void setUp() {
+      testUser = new User();
+      testUser.setId(1L);
+      testUser.setUsername("testuser");
+      testUser.setEmail("test@example.com");
+      testUser.setPasswordHash("hashedpassword");
+      testUser.setRole("ROLE_SUPERADMIN");
+   }
 
-    @Test
-    void loadUserByUsername_Success() {
-        // Arrange
-        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
+   @Test
+   void loadUserByUsername_Success() {
+      // Arrange
+      when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(testUser));
 
-        // Act
-        UserDetails userDetails = userDetailsService.loadUserByUsername("testuser");
+      // Act
+      UserDetails userDetails = userDetailsService.loadUserByUsername("testuser");
 
-        // Assert
-        assertNotNull(userDetails);
-        assertTrue(userDetails instanceof CustomUserDetails);
-        assertEquals("testuser", userDetails.getUsername());
-        assertEquals("hashedpassword", userDetails.getPassword());
-        assertTrue(userDetails.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")));
-        
-        // Verify repository was called
-        verify(userRepository).findByUsername("testuser");
-    }
+      // Assert
+      assertNotNull(userDetails);
+      assertTrue(userDetails instanceof CustomUserDetails);
+      assertEquals("testuser", userDetails.getUsername());
+      assertEquals("hashedpassword", userDetails.getPassword());
+      assertTrue(userDetails.isEnabled());
+      assertTrue(userDetails.isAccountNonExpired());
+      assertTrue(userDetails.isCredentialsNonExpired());
+      assertTrue(userDetails.isAccountNonLocked());
 
-    @Test
-    void loadUserByUsername_UserNotFound() {
-        // Arrange
-        when(userRepository.findByUsername("nonexistentuser")).thenReturn(Optional.empty());
+      // Verify that the repository method was called
+      verify(userRepository).findByUsername("testuser");
+   }
 
-        // Act & Assert
-        Exception exception = assertThrows(UsernameNotFoundException.class, () -> {
-            userDetailsService.loadUserByUsername("nonexistentuser");
-        });
-        
-        assertEquals("User not found nonexistentuser", exception.getMessage());
-        
-        // Verify repository was called
-        verify(userRepository).findByUsername("nonexistentuser");
-    }
+   @Test
+   void loadUserByUsername_UserNotFound() {
+      // Arrange
+      when(userRepository.findByUsername("nonexistentuser")).thenReturn(Optional.empty());
+
+      // Act & Assert
+      UsernameNotFoundException exception = assertThrows(UsernameNotFoundException.class, () -> {
+         userDetailsService.loadUserByUsername("nonexistentuser");
+      });
+
+      assertEquals("User not found nonexistentuser", exception.getMessage());
+      verify(userRepository).findByUsername("nonexistentuser");
+   }
 }

@@ -16,10 +16,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ApiGatewayHeaderFilter extends OncePerRequestFilter {
 
-    @Value("${gateway.header.name:X-Gateway-Access}")
+    @Value("${gateway.header.name}")
     private String gatewayHeaderName;
 
-    @Value("${gateway.header.value:enabled}")
+    @Value("${gateway.header.value}")
     private String gatewayHeaderValue;
 
     @Override
