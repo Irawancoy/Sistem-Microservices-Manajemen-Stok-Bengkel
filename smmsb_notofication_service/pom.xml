@@ -31,6 +31,7 @@
 		<spring-cloud.version>2024.0.0</spring-cloud.version>
 		<jakartamail.version>2.0.1</jakartamail.version>
 		<modelmapper.version>3.1.1</modelmapper.version>
+		<openapi.version>2.7.0</openapi.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -67,6 +68,11 @@
 			<groupId>com.sun.mail</groupId>
 			<artifactId>jakarta.mail</artifactId>
 			<version>${jakartamail.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>${openapi.version}</version>
 		</dependency>
 
 		<dependency>

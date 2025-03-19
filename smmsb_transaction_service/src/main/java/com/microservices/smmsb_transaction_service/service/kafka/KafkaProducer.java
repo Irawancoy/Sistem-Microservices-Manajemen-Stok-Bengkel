@@ -17,12 +17,12 @@ public class KafkaProducer {
    private final KafkaTemplate<String, Object> kafkaTemplate;
 
    public void sendUpdateStockEvent(UpdateProductStockEvent event) {
-       log.info("Sending event to Kafka: {}", event); // Tambahkan log ini
+       log.info("Sending event to Kafka: {}", event);
        kafkaTemplate.send("update-product-stock", event);
    }
 
     public void sendNotificationEvent(NotificationEvent event) {
-        log.info("Sending event to Kafka: {}", event); // Tambahkan log ini
+        log.info("Sending event to Kafka: {}", event); 
         kafkaTemplate.send("notificationTopic", event);
     }
 }

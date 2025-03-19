@@ -28,6 +28,8 @@ import com.microservices.smmsb_user_service.service.UserService;
 import com.microservices.smmsb_user_service.utils.MessageUtils;
 import com.microservices.smmsb_user_service.utils.UserSpecifications;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @Service
 public class UserServiceImpl implements UserService {
 
@@ -48,7 +50,7 @@ public class UserServiceImpl implements UserService {
       // Create User
       @Override
       @Transactional
-      public MessageResponse createUser(CreateUserRequest createUserRequest) {
+      public MessageResponse createUser(CreateUserRequest createUserRequest,HttpServletRequest request) {
             // Check if username already exists
             if (userRepository.existsByUsername(createUserRequest.getUsername())) {
                   return new MessageResponse(

@@ -7,9 +7,11 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import java.util.List;
 
 @Configuration
 public class OpenApiConfig {
@@ -38,32 +40,43 @@ public class OpenApiConfig {
     @Value("${spring.openapi.license.url}")
     private String licenseUrl;
 
+    @Value("${server.port}")
+    private int serverPort;
+
     @Bean
     public OpenAPI openAPI() {
         return new OpenAPI()
-            .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
-            .addSecurityItem(new SecurityRequirement().addList("X-Session-Id"))
-            .components(new Components()
-                .addSecuritySchemes("Bearer Authentication", createAPIKeyScheme())
-                .addSecuritySchemes("X-Session-Id", createSessionIdScheme()))
-            .info(new Info().title(title)
-                .description(description)
-                .version(version)
-                .contact(new Contact().name(contactName).url(contactUrl).email(contactEmail))
-                .license(new License().name(licenseName).url(licenseUrl)));
+                .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
+                .addSecurityItem(new SecurityRequirement().addList("X-Session-Id"))
+                .components(new Components()
+                        .addSecuritySchemes("Bearer Authentication", createAPIKeyScheme())
+                        .addSecuritySchemes("X-Session-Id", createSessionIdScheme()))
+                .info(new Info().title(title)
+                        .description(description)
+                        .version(version)
+                        .contact(new Contact().name(contactName).url(contactUrl).email(contactEmail))
+                        .license(new License().name(licenseName).url(licenseUrl)))
+                .servers(List.of(
+                        new Server().url("http://localhost:8080").description("API Gateway"),
+                        new Server().url("http://localhost:8080/user-service")
+                                .description("Transaction via API Gateway"),
+                        new Server().url("http://localhost:" + serverPort + "/transaction-service")
+                                .description("Direct Transaction Service")));
+    
+
     }
 
     private SecurityScheme createAPIKeyScheme() {
         return new SecurityScheme()
-            .type(SecurityScheme.Type.HTTP)
-            .bearerFormat("JWT")
-            .scheme("bearer");
+                .type(SecurityScheme.Type.HTTP)
+                .bearerFormat("JWT")
+                .scheme("bearer");
     }
 
     private SecurityScheme createSessionIdScheme() {
         return new SecurityScheme()
-            .type(SecurityScheme.Type.APIKEY)
-            .in(SecurityScheme.In.HEADER)
-            .name("X-Session-Id");
+                .type(SecurityScheme.Type.APIKEY)
+                .in(SecurityScheme.In.HEADER)
+                .name("X-Session-Id");
     }
 }

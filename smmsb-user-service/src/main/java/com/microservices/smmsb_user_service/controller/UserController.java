@@ -5,7 +5,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,6 +28,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -44,7 +44,6 @@ public class UserController {
 
       // Create User
       @PostMapping("/create")
-      @PreAuthorize("hasRole('SUPERADMIN')")
       @Operation(summary = "Create a new user", description = "Creates a new user account.", tags = { "Users" })
       @ApiResponses(value = {
                   @ApiResponse(responseCode = "201", description = "User created successfully", content = @Content(schema = @Schema(implementation = MessageResponse.class))),
@@ -52,13 +51,12 @@ public class UserController {
                   @ApiResponse(responseCode = "409", description = "Username or email already exists", content = @Content(schema = @Schema(implementation = MessageResponse.class))),
                   @ApiResponse(responseCode = "403", description = "Forbidden", content = @Content(schema = @Schema(implementation = MessageResponse.class)))
       })
-      public MessageResponse createUser(CreateUserRequest createUserRequest) {
-            return userService.createUser(createUserRequest);
+      public MessageResponse createUser(CreateUserRequest createUserRequest, HttpServletRequest request) {
+            return userService.createUser(createUserRequest, request);
       }
 
       // Update User
       @PutMapping("/update/{id}")
-      @PreAuthorize("hasRole('SUPERADMIN')")
       @Operation(summary = "Update a user", description = "Updates an existing user's information.", tags = {
                   "Users" })
       @ApiResponses(value = {
@@ -74,7 +72,6 @@ public class UserController {
 
       // Delete User
       @DeleteMapping("/delete/{id}")
-      @PreAuthorize("hasRole('SUPERADMIN')")
       @Operation(summary = "Delete a user", description = "Deletes a user by their ID.", tags = { "Users" })
       @ApiResponses(value = {
                   @ApiResponse(responseCode = "200", description = "User deleted successfully", content = @Content(schema = @Schema(implementation = MessageResponse.class))),
@@ -86,7 +83,6 @@ public class UserController {
 
       // Get All Users
       @GetMapping("/get-all")
-      @PreAuthorize("hasRole('SUPERADMIN')")
       @Operation(summary = "Get all users", description = "Retrieves a list of all users with optional filters.", tags = {
                   "Users" })
       @ApiResponses(value = {
@@ -104,7 +100,6 @@ public class UserController {
 
       // Get User By Id
       @GetMapping("/get-by-id/{id}")
-      @PreAuthorize("hasRole('SUPERADMIN')")
       @Operation(summary = "Get user by ID", description = "Retrieves a user by their ID.", tags = { "Users" })
       @ApiResponses(value = {
                   @ApiResponse(responseCode = "200", description = "Successfully retrieved user", content = @Content(schema = @Schema(implementation = UserDto.class))),

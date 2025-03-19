@@ -10,8 +10,7 @@ import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "transactions")
-@Getter
-@Setter
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
