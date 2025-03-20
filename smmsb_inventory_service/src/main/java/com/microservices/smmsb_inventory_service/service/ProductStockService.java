@@ -2,7 +2,6 @@ package com.microservices.smmsb_inventory_service.service;
 
 import com.microservices.smmsb_inventory_service.dto.response.MessageResponse;
 
-import jakarta.servlet.http.HttpServletRequest;
 
 import com.microservices.smmsb_inventory_service.dto.request.CreateProductStockRequest;
 import com.microservices.smmsb_inventory_service.dto.request.UpdateProductStockRequest;
@@ -19,16 +18,17 @@ import com.microservices.smmsb_inventory_service.dto.response.ListResponse;
 
 public interface ProductStockService {
 
-      MessageResponse createProductStock(CreateProductStockRequest createProductStockRequest,HttpServletRequest request);
+      MessageResponse createProductStock(CreateProductStockRequest createProductStockRequest);
 
-      MessageResponse updateProductStock(Long id, UpdateProductStockRequest updateProductStockRequest,HttpServletRequest request);
+      MessageResponse updateProductStock(Long id, UpdateProductStockRequest updateProductStockRequest);
 
       ApiDataResponseBuilder getProductStockById(Long id);
 
-      MessageResponse deleteProductStock(Long id,HttpServletRequest request);
+      MessageResponse deleteProductStock(Long id);
 
       ListResponse<ProductStockDto> getAllProductStocks(Pageable pageable, String productName,
-                   BigDecimal price);
+                  BigDecimal price,
+                  Integer quantity);
 
       ListResponse<Map<String, String>> uploadImage(MultipartFile file, Long id);
 

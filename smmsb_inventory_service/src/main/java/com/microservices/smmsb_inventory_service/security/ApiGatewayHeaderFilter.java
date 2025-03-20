@@ -16,10 +16,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class ApiGatewayHeaderFilter extends OncePerRequestFilter {
 
-    @Value("${gateway.header.name:X-Gateway-Access}")
+    @Value("${gateway.header.name}")
     private String gatewayHeaderName;
 
-    @Value("${gateway.header.value:enabled}")
+    @Value("${gateway.header.value}")
     private String gatewayHeaderValue;
 
     @Override
@@ -29,8 +29,8 @@ public class ApiGatewayHeaderFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
 
         // Skip check for Swagger paths
-        if (path.startsWith("/transaction-service/swagger-ui") ||
-                path.startsWith("/transaction-service/v3/api-docs")) {
+        if (path.startsWith("/inventory-service/swagger-ui") ||
+                path.startsWith("/inventory-service/v3/api-docs")) {
             filterChain.doFilter(request, response);
             return;
         }

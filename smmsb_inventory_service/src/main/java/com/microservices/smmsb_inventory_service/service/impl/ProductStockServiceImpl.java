@@ -8,6 +8,10 @@ import com.microservices.smmsb_inventory_service.dto.request.UpdateProductStockR
 import com.microservices.smmsb_inventory_service.dto.response.ApiDataResponseBuilder;
 import com.microservices.smmsb_inventory_service.dto.response.ListResponse;
 import com.microservices.smmsb_inventory_service.dto.response.MessageResponse;
+import com.microservices.smmsb_inventory_service.exception.AuthenticationFailedException;
+import com.microservices.smmsb_inventory_service.exception.BadRequestException;
+import com.microservices.smmsb_inventory_service.exception.DuplicateResourceException;
+import com.microservices.smmsb_inventory_service.exception.ResourceNotFoundException;
 import com.microservices.smmsb_inventory_service.model.ProductStock;
 import com.microservices.smmsb_inventory_service.repository.ProductStockRepository;
 import com.microservices.smmsb_inventory_service.service.MinioService;
@@ -18,7 +22,6 @@ import com.microservices.smmsb_inventory_service.utils.ProductStockSpesification
 
 import jakarta.servlet.http.HttpServletRequest;
 
-import org.apache.kafka.common.errors.ResourceNotFoundException;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -27,12 +30,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -64,97 +67,127 @@ public class ProductStockServiceImpl implements ProductStockService {
 
         @Override
         @Transactional
-        public MessageResponse createProductStock(CreateProductStockRequest createProductStockRequest,
-                        HttpServletRequest request) {
+        public MessageResponse createProductStock(CreateProductStockRequest createProductStockRequest) {
+                HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+                                .getRequest();
                 String userIdHeader = request.getHeader("X-User-Id");
                 if (userIdHeader == null) {
-                        return new MessageResponse(
-                                        messageUtils.getMessage("user.not.found"),
-                                        HttpStatus.UNAUTHORIZED.value(),
-                                        HttpStatus.UNAUTHORIZED.name());
+                        throw new AuthenticationFailedException(messageUtils.getMessage("error.user.not.found"));
                 }
 
                 Long userId;
                 try {
                         userId = Long.parseLong(userIdHeader);
                 } catch (NumberFormatException e) {
-                        return new MessageResponse(
-                                        messageUtils.getMessage("invalid.user.id"),
-                                        HttpStatus.BAD_REQUEST.value(),
-                                        HttpStatus.BAD_REQUEST.name());
+                        throw new BadRequestException(messageUtils.getMessage("error.invalid.user.id"));
+                }
+
+                // Check if productName already exists
+                if (productStockRepository
+                                .existsByProductNameAndIsDeletedFalse(createProductStockRequest.getProductName())) {
+                        throw new DuplicateResourceException(
+                                        messageUtils.getMessage("error.product.name.already.exists",
+                                                        createProductStockRequest.getProductName()));
                 }
 
                 ProductStock productStock = modelMapper.map(createProductStockRequest, ProductStock.class);
-
                 productStock.setCreatedBy(userId);
-
                 productStock = productStockRepository.save(productStock);
-                if (productStock.getId() == null) {
-                        return new MessageResponse(
-                                        messageUtils.getMessage("product.creation.failed"),
-                                        HttpStatus.INTERNAL_SERVER_ERROR.value(),
-                                        HttpStatus.INTERNAL_SERVER_ERROR.name());
-                }
 
                 NotificationEvent notificationEvent = new NotificationEvent(
                                 userId,
                                 "Produk " + createProductStockRequest.getProductName() + " berhasil ditambahkan",
                                 "Create");
-
                 kafkaProducer.sendNotificationEvent(notificationEvent);
 
                 return new MessageResponse(
-                                messageUtils.getMessage("product.created", productStock.getProductName()),
+                                messageUtils.getMessage("success.product.created", productStock.getProductName()),
                                 HttpStatus.CREATED.value(),
                                 HttpStatus.CREATED.name());
         }
 
         @Override
         @Transactional
-        public MessageResponse updateProductStock(Long id, UpdateProductStockRequest updateProductStockRequest,
-                        HttpServletRequest request) {
+        public MessageResponse updateProductStock(Long id, UpdateProductStockRequest updateProductStockRequest) {
+                HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+                                .getRequest();
                 String userIdHeader = request.getHeader("X-User-Id");
+
                 if (userIdHeader == null) {
-                        return new MessageResponse(
-                                        messageUtils.getMessage("user.not.found"),
-                                        HttpStatus.UNAUTHORIZED.value(),
-                                        HttpStatus.UNAUTHORIZED.name());
+                        throw new AuthenticationFailedException(messageUtils.getMessage("error.user.not.found"));
                 }
 
                 Long userId;
                 try {
                         userId = Long.parseLong(userIdHeader);
                 } catch (NumberFormatException e) {
-                        return new MessageResponse(
-                                        messageUtils.getMessage("invalid.user.id"),
-                                        HttpStatus.BAD_REQUEST.value(),
-                                        HttpStatus.BAD_REQUEST.name());
+                        throw new BadRequestException(messageUtils.getMessage("error.invalid.user.id"));
                 }
-                ProductStock productStock = productStockRepository.findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + id));
-                modelMapper.map(updateProductStockRequest, productStock);
+
+                // Cek apakah produk ada di database
+                ProductStock productStock = productStockRepository.findByIdAndIsDeletedFalse(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                messageUtils.getMessage("error.product.not.found")));
+
+                // Jika productName dikirim dalam request, cek apakah sudah ada di database
+                if (updateProductStockRequest.getProductName() != null
+                                && !updateProductStockRequest.getProductName().equals(productStock.getProductName())) {
+
+                        if (productStockRepository.existsByProductNameAndIsDeletedFalse(
+                                        updateProductStockRequest.getProductName())) {
+                                throw new DuplicateResourceException(
+                                                messageUtils.getMessage("error.product.name.already.exists",
+                                                                updateProductStockRequest.getProductName()));
+                        }
+                        productStock.setProductName(updateProductStockRequest.getProductName());
+                }
+
+                // Update description jika ada di request
+                if (updateProductStockRequest.getDescription() != null) {
+                        productStock.setDescription(updateProductStockRequest.getDescription());
+                }
+
+                // Update quantity jika ada di request
+                if (updateProductStockRequest.getQuantity() > 0) {
+                        productStock.setQuantity(updateProductStockRequest.getQuantity());
+                }
+
+                // Update price jika ada di request
+                if (updateProductStockRequest.getPrice() != null
+                                && updateProductStockRequest.getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                        productStock.setPrice(updateProductStockRequest.getPrice());
+                }
+
+                // Update updatedBy
+                productStock.setUpdatedBy(userId);
+
+                // Simpan perubahan
                 productStockRepository.save(productStock);
 
-                /// Send a Kafka event to notify the notification service
+                // Kirim event Kafka untuk memberi tahu layanan notifikasi
                 NotificationEvent notificationEvent = new NotificationEvent(
                                 userId,
-                                "Produk " + updateProductStockRequest.getProductName() + " berhasil diupdate",
+                                "Produk " + productStock.getProductName() + " berhasil diupdate",
                                 "Update");
                 kafkaProducer.sendNotificationEvent(notificationEvent);
+
                 return new MessageResponse(
-                                messageUtils.getMessage("product.updated", productStock.getProductName()),
+                                messageUtils.getMessage("success.product.updated", productStock.getProductName()),
                                 HttpStatus.OK.value(),
                                 HttpStatus.OK.name());
         }
 
         @Override
         public ApiDataResponseBuilder getProductStockById(Long id) {
-                ProductStock productStock = productStockRepository.findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + id));
+                ProductStock productStock = productStockRepository.findByIdAndIsDeletedFalse(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                messageUtils.getMessage("error.product.not.found")));
+
                 ProductStockDto productStockDto = modelMapper.map(productStock, ProductStockDto.class);
+
                 return ApiDataResponseBuilder.builder()
                                 .data(productStockDto)
-                                .message(messageUtils.getMessage("products.found", productStock.getProductName()))
+                                .message(messageUtils.getMessage("success.product.retrieved"))
                                 .status(HttpStatus.OK)
                                 .statusCode(HttpStatus.OK.value())
                                 .build();
@@ -162,27 +195,31 @@ public class ProductStockServiceImpl implements ProductStockService {
 
         @Override
         @Transactional
-        public MessageResponse deleteProductStock(Long id, HttpServletRequest request) {
+        public MessageResponse deleteProductStock(Long id) {
+                HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes())
+                                .getRequest();
                 String userIdHeader = request.getHeader("X-User-Id");
                 if (userIdHeader == null) {
-                        return new MessageResponse(
-                                        messageUtils.getMessage("user.not.found"),
-                                        HttpStatus.UNAUTHORIZED.value(),
-                                        HttpStatus.UNAUTHORIZED.name());
+                        throw new AuthenticationFailedException(messageUtils.getMessage("error.user.not.found"));
                 }
 
                 Long userId;
                 try {
                         userId = Long.parseLong(userIdHeader);
                 } catch (NumberFormatException e) {
-                        return new MessageResponse(
-                                        messageUtils.getMessage("invalid.user.id"),
-                                        HttpStatus.BAD_REQUEST.value(),
-                                        HttpStatus.BAD_REQUEST.name());
+                        throw new BadRequestException(messageUtils.getMessage("error.invalid.user.id"));
                 }
-                ProductStock productStock = productStockRepository.findById(id)
-                                .orElseThrow(() -> new IllegalArgumentException("Product not found with id: " + id));
-                productStockRepository.delete(productStock);
+
+                ProductStock productStock = productStockRepository.findByIdAndIsDeletedFalse(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                messageUtils.getMessage("error.product.not.found")));
+
+                // Soft delete the product stock
+                productStock.setDeleted(true);
+                productStock.setDeletedBy(userId);
+
+                productStockRepository.save(productStock);
+
                 /// Send a Kafka event to notify the notification service
                 NotificationEvent notificationEvent = new NotificationEvent(
                                 userId,
@@ -191,46 +228,60 @@ public class ProductStockServiceImpl implements ProductStockService {
                 kafkaProducer.sendNotificationEvent(notificationEvent);
 
                 return new MessageResponse(
-                                messageUtils.getMessage("product.deleted", productStock.getProductName()),
+                                messageUtils.getMessage("success.product.deleted", productStock.getProductName()),
                                 HttpStatus.OK.value(),
                                 HttpStatus.OK.name());
         }
 
         @Override
         @Transactional
-        public ListResponse<Map<String, String>> uploadImage(MultipartFile file, Long Id) {
-                ProductStock product = productStockRepository
-                                .findById(Id)
-                                .orElseThrow(
-                                                () -> new ResourceNotFoundException(
-                                                                messageUtils.getMessage("product.notFound", Id)));
-                if (product.getImageUrl() != null) {
+        public ListResponse<Map<String, String>> uploadImage(MultipartFile file, Long id) {
+                ProductStock product = productStockRepository.findByIdAndIsDeletedFalse(id)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                messageUtils.getMessage("error.product.not.found")));
+
+                // 🔹 Validasi format file yang diperbolehkan
+                String contentType = file.getContentType();
+                List<String> allowedTypes = List.of("image/jpeg", "image/jpg", "image/png");
+
+                if (contentType == null || !allowedTypes.contains(contentType)) {
+                        throw new BadRequestException(messageUtils.getMessage("error.invalid.file.type"));
+                }
+
+                // 🔹 Hapus gambar lama jika ada
+                if (product.getImageUrl() != null && !product.getImageUrl().isEmpty()) {
+                        String oldFileName = getFileNameFromUrl(product.getImageUrl());
                         try {
-                                minioService.removeObject("products", getFileNameFromUrl(product.getImageUrl()));
+                                minioService.removeObject("smmsbproducts", "products/" + oldFileName);
+                                log.info("Successfully deleted old image: {}", oldFileName);
                         } catch (Exception e) {
-                                // Log error
+                                log.error("Failed to delete old image: {} - Error: {}", oldFileName, e.getMessage());
                         }
                 }
 
-                String objectName = "products/" + Id + "_" + System.currentTimeMillis() + "_"
-                                + file.getOriginalFilename();
-                String url = minioService.uploadFile(file, objectName, "smmsbproducts");
-                product.setImageUrl(url);
-                productStockRepository.save(product);
+                // 🔹 Upload gambar baru
+                String objectName = String.format("products/%d_%d_%s", id, System.currentTimeMillis(),
+                                file.getOriginalFilename());
+                String imageUrl = minioService.uploadFile(file, objectName, "smmsbproducts");
 
-                Map<String, String> urlMap = new HashMap<>();
-                urlMap.put("url", url);
-                ListResponse<Map<String, String>> response = new ListResponse<>(
-                                Collections.singletonList(urlMap),
-                                messageUtils.getMessage("productStock.uploadPhoto.success", product.getProductName()),
+                // 🔹 Simpan URL ke database
+                product.setImageUrl(imageUrl);
+                productStockRepository.save(product);
+                log.info("Product updated successfully with new image: {}", imageUrl);
+
+                // 🔹 Build response
+                Map<String, String> responseData = Map.of("url", imageUrl);
+                return new ListResponse<>(
+                                List.of(responseData),
+                                messageUtils.getMessage("success.product.upload.photo", product.getProductName()),
                                 HttpStatus.OK.value(),
                                 HttpStatus.OK.name());
-                return response;
         }
 
         @Override
         public ListResponse<ProductStockDto> getAllProductStocks(Pageable pageable, String productName,
-                        BigDecimal price) {
+                        BigDecimal price,
+                                        Integer quantity) {
                 Specification<ProductStock> spec = Specification.where(null);
                 if (productName != null) {
                         spec = spec.and(ProductStockSpesification.hasProductName(productName));
@@ -238,13 +289,16 @@ public class ProductStockServiceImpl implements ProductStockService {
                 if (price != null) {
                         spec = spec.and(ProductStockSpesification.hasPrice(price));
                 }
+                if (quantity != null) {
+                        spec = spec.and(ProductStockSpesification.hasQuantity(quantity));
+                }
 
                 Page<ProductStock> productStocks = productStockRepository.findAll(spec, pageable);
                 List<ProductStockDto> productStockDtos = productStocks.getContent().stream()
                                 .map(product -> modelMapper.map(product, ProductStockDto.class))
                                 .collect(Collectors.toList());
 
-                return new ListResponse<>(productStockDtos, messageUtils.getMessage("products.found"),
+                return new ListResponse<>(productStockDtos, messageUtils.getMessage("success.product.retrieved"),
                                 HttpStatus.OK.value(), HttpStatus.OK.name());
         }
 
@@ -255,34 +309,32 @@ public class ProductStockServiceImpl implements ProductStockService {
         @Override
         @Scheduled(fixedRate = 3600000) // 1 jam
         public void checkAndNotifyLowStockProducts() {
-            List<ProductStock> lowStockProducts = productStockRepository
-                    .findByQuantityLessThan(LOW_STOCK_THRESHOLD);
-        
-            for (ProductStock product : lowStockProducts) {
-                // Membuat event low stock
-                LowStockAlertEvent lowStockAlertEvent = new LowStockAlertEvent(
-                        product.getId(),
-                        product.getQuantity(),
-                        product.getProductName(),
-                        "Stok produk " + product.getProductName() + " kurang dari " + LOW_STOCK_THRESHOLD
-                );
-        
-                // Kirim event ke Kafka untuk low stock alert
-                kafkaProducer.sendLowStockAlertEvent(lowStockAlertEvent);
-                log.info("Low stock alert event sent for product: {}", product.getProductName());
-        
-                // Membuat event notifikasi untuk user (misalnya admin gudang)
-                NotificationEvent notificationEvent = new NotificationEvent(
-                        null, // userId bisa di-set null jika tidak spesifik ke user tertentu
-                        lowStockAlertEvent.getMessage(), // Ambil message dari event low stock alert
-                        "LOW_STOCK_ALERT"
-                );
-        
-                // Kirim event ke Kafka untuk notifikasi
-                kafkaProducer.sendNotificationEvent(notificationEvent);
-                log.info("Notification event sent for low stock product: {}", product.getProductName());
-            }
+                List<ProductStock> lowStockProducts = productStockRepository
+                                .findByQuantityLessThan(LOW_STOCK_THRESHOLD);
+
+                for (ProductStock product : lowStockProducts) {
+                        // Membuat event low stock
+                        LowStockAlertEvent lowStockAlertEvent = new LowStockAlertEvent(
+                                        product.getId(),
+                                        product.getQuantity(),
+                                        product.getProductName(),
+                                        "Stok produk " + product.getProductName() + " kurang dari "
+                                                        + LOW_STOCK_THRESHOLD);
+
+                        // Kirim event ke Kafka untuk low stock alert
+                        kafkaProducer.sendLowStockAlertEvent(lowStockAlertEvent);
+                        log.info("Low stock alert event sent for product: {}", product.getProductName());
+
+                        // Membuat event notifikasi untuk user (misalnya admin gudang)
+                        NotificationEvent notificationEvent = new NotificationEvent(
+                                        null, // userId bisa di-set null jika tidak spesifik ke user tertentu
+                                        lowStockAlertEvent.getMessage(), // Ambil message dari event low stock alert
+                                        "LOW_STOCK_ALERT");
+
+                        // Kirim event ke Kafka untuk notifikasi
+                        kafkaProducer.sendNotificationEvent(notificationEvent);
+                        log.info("Notification event sent for low stock product: {}", product.getProductName());
+                }
         }
-        
 
 }

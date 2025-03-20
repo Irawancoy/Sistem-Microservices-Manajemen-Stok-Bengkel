@@ -11,13 +11,13 @@ public class ProductStockSpesification {
    public static Specification<ProductStock> hasProductName(String productName) {
       return (root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("productName"), "%" + productName + "%");
    }
-    
-   public static Specification<ProductStock> hasChangeType(String changeType) {
-      return (root, query, criteriaBuilder) -> criteriaBuilder.like(root.get("changeType"), "%" + changeType + "%");
-   }
 
    public static Specification<ProductStock> hasPrice(BigDecimal price) {
       return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("price"), price);
+   }
+
+   public static Specification<ProductStock> hasQuantity(Integer quantity) {
+      return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get("quantity"), quantity);
    }
    
 }
