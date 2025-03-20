@@ -79,33 +79,38 @@ public class UserServiceImpl implements UserService {
                         .orElseThrow(() -> new ResourceNotFoundException(
                                     messageUtils.getMessage("error.user.not.found")));
 
-            // Check if username already exists
-            if (!user.getUsername().equals(updateUserRequest.getUsername())
-                        && userRepository.existsByUsername(updateUserRequest.getUsername())) {
-                  throw new DuplicateResourceException(
-                              messageUtils.getMessage("error.user.username.already.exists",
-                                          updateUserRequest.getUsername()));
-            }
-            // Check if email already exists
-            if (!user.getEmail().equals(updateUserRequest.getEmail())
-                        && userRepository.existsByEmail(updateUserRequest.getEmail())) {
-                  throw new DuplicateResourceException(
-                              messageUtils.getMessage("error.user.email.already.exists", updateUserRequest.getEmail()));
-            }
-
-            // Update user jika ada request yang dikirim
-            if (updateUserRequest.getUsername() != null) {
+            // Update only if request data is provided
+            if (updateUserRequest.getUsername() != null
+                        && !updateUserRequest.getUsername().equals(user.getUsername())) {
+                  if (userRepository.existsByUsername(updateUserRequest.getUsername())) {
+                        throw new DuplicateResourceException(
+                                    messageUtils.getMessage("error.user.username.already.exists",
+                                                updateUserRequest.getUsername()));
+                  }
                   user.setUsername(updateUserRequest.getUsername());
             }
-            if (updateUserRequest.getEmail() != null) {
+
+            if (updateUserRequest.getEmail() != null
+                        && !updateUserRequest.getEmail().equals(user.getEmail())) {
+                  if (userRepository.existsByEmail(updateUserRequest.getEmail())) {
+                        throw new DuplicateResourceException(
+                                    messageUtils.getMessage("error.user.email.already.exists",
+                                                updateUserRequest.getEmail()));
+                  }
                   user.setEmail(updateUserRequest.getEmail());
             }
+
             if (updateUserRequest.getPassword() != null) {
                   user.setPasswordHash(passwordEncoder.encode(updateUserRequest.getPassword()));
             }
+
             if (updateUserRequest.getRole() != null) {
                   user.setRole(updateUserRequest.getRole());
             }
+
+            // Simpan perubahan ke database
+            userRepository.save(user);
+
             return new MessageResponse(
                         messageUtils.getMessage("success.user.updated", user.getUsername()),
                         HttpStatus.OK.value(),
